@@ -24,6 +24,7 @@ interface Bullet {
   color: string;
 }
 
+// Base canvas dimensions (will scale for mobile)
 const CANVAS_WIDTH = 800;
 const CANVAS_HEIGHT = 600;
 const CAR_SIZE = 30;
@@ -43,15 +44,32 @@ export default function SmashKarts() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [gameState, setGameState] = useState<"menu" | "playing" | "gameover">("menu");
   const [winner, setWinner] = useState<string>("");
+  const [isMobile, setIsMobile] = useState(false);
   
   const carsRef = useRef<Car[]>([]);
   const bulletsRef = useRef<Bullet[]>([]);
   const keysRef = useRef<{ [key: string]: boolean }>({});
   const lastShotRef = useRef<number>(0);
   const animationIdRef = useRef<number | undefined>(undefined);
+  
+  // Mobile control states
+  const touchControlsRef = useRef({
+    forward: false,
+    backward: false,
+    left: false,
+    right: false,
+    shoot: false,
+  });
 
   useEffect(() => {
     setMounted(true);
+    // Detect mobile device
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768 || 'ontouchstart' in window);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
   }, []);
   
   const connectedWallet = wallets[0];
@@ -261,19 +279,26 @@ export default function SmashKarts() {
     // Update player car
     const player = cars[0];
     if (player.health > 0) {
-      if (keysRef.current["w"] || keysRef.current["ArrowUp"]) {
+      // Check both keyboard and touch controls
+      const forward = keysRef.current["w"] || keysRef.current["ArrowUp"] || touchControlsRef.current.forward;
+      const backward = keysRef.current["s"] || keysRef.current["ArrowDown"] || touchControlsRef.current.backward;
+      const left = keysRef.current["a"] || keysRef.current["ArrowLeft"] || touchControlsRef.current.left;
+      const right = keysRef.current["d"] || keysRef.current["ArrowRight"] || touchControlsRef.current.right;
+      const shoot = keysRef.current[" "] || touchControlsRef.current.shoot;
+      
+      if (forward) {
         player.speed = Math.min(player.speed + ACCELERATION, MAX_SPEED);
       }
-      if (keysRef.current["s"] || keysRef.current["ArrowDown"]) {
+      if (backward) {
         player.speed = Math.max(player.speed - ACCELERATION, -MAX_SPEED / 2);
       }
-      if (keysRef.current["a"] || keysRef.current["ArrowLeft"]) {
+      if (left) {
         player.angle -= TURN_SPEED;
       }
-      if (keysRef.current["d"] || keysRef.current["ArrowRight"]) {
+      if (right) {
         player.angle += TURN_SPEED;
       }
-      if (keysRef.current[" "]) {
+      if (shoot) {
         shootBullet(0);
       }
 
@@ -413,35 +438,44 @@ export default function SmashKarts() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-background p-2 sm:p-4">
       {gameState === "menu" && (
-        <div className="flex flex-col items-center gap-6 text-center">
-          <h1 className="text-5xl font-bold text-foreground mb-4">
+        <div className="flex flex-col items-center gap-4 sm:gap-6 text-center max-w-lg w-full px-4">
+          <h1 className="text-3xl sm:text-5xl font-bold text-foreground mb-2 sm:mb-4">
             🏎️ SmashKarts
           </h1>
-          <p className="text-xl text-muted-foreground max-w-md">
+          <p className="text-base sm:text-xl text-muted-foreground max-w-md">
             Drive, shoot, and destroy your opponents! Last car standing wins.
           </p>
-          <div className="bg-card p-6 rounded-lg border border-border">
-            <h2 className="text-xl font-semibold mb-3 text-card-foreground">Controls</h2>
-            <div className="text-left space-y-2 text-muted-foreground">
-              <p>🎮 <strong>WASD</strong> or <strong>Arrow Keys</strong> - Move</p>
-              <p>🔫 <strong>Space</strong> - Shoot</p>
+          <div className="bg-card p-4 sm:p-6 rounded-lg border border-border w-full">
+            <h2 className="text-lg sm:text-xl font-semibold mb-3 text-card-foreground">Controls</h2>
+            <div className="text-left space-y-2 text-sm sm:text-base text-muted-foreground">
+              {isMobile ? (
+                <>
+                  <p>🎮 <strong>On-screen buttons</strong> - Move & Turn</p>
+                  <p>🔫 <strong>Fire button</strong> - Shoot</p>
+                </>
+              ) : (
+                <>
+                  <p>🎮 <strong>WASD</strong> or <strong>Arrow Keys</strong> - Move</p>
+                  <p>🔫 <strong>Space</strong> - Shoot</p>
+                </>
+              )}
             </div>
           </div>
           
           {!ready && (
-            <div className="px-8 py-4 bg-secondary text-secondary-foreground rounded-lg text-xl font-semibold">
+            <div className="px-6 sm:px-8 py-3 sm:py-4 bg-secondary text-secondary-foreground rounded-lg text-lg sm:text-xl font-semibold">
               Loading...
             </div>
           )}
           
           {ready && !authenticated && (
-            <div className="flex flex-col gap-4 items-center">
-              <p className="text-muted-foreground">Connect your wallet to play</p>
+            <div className="flex flex-col gap-4 items-center w-full">
+              <p className="text-sm sm:text-base text-muted-foreground">Connect your wallet to play</p>
               <button
                 onClick={login}
-                className="px-8 py-4 bg-primary text-primary-foreground rounded-lg text-xl font-semibold hover:opacity-90 transition-opacity"
+                className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 bg-primary text-primary-foreground rounded-lg text-lg sm:text-xl font-semibold hover:opacity-90 transition-opacity active:scale-95"
               >
                 Connect Wallet
               </button>
@@ -449,23 +483,23 @@ export default function SmashKarts() {
           )}
           
           {ready && authenticated && (
-            <div className="flex flex-col gap-4 items-center">
+            <div className="flex flex-col gap-4 items-center w-full">
               {connectedWallet && (
                 <div className="bg-secondary/50 px-4 py-2 rounded-lg">
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-xs sm:text-sm text-muted-foreground">
                     Connected: {connectedWallet.address.slice(0, 6)}...{connectedWallet.address.slice(-4)}
                   </p>
                 </div>
               )}
               <button
                 onClick={startGame}
-                className="px-8 py-4 bg-primary text-primary-foreground rounded-lg text-xl font-semibold hover:opacity-90 transition-opacity"
+                className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 bg-primary text-primary-foreground rounded-lg text-lg sm:text-xl font-semibold hover:opacity-90 transition-opacity active:scale-95"
               >
                 Start Game
               </button>
               <button
                 onClick={logout}
-                className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                className="px-4 py-2 text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
                 Disconnect Wallet
               </button>
@@ -475,28 +509,100 @@ export default function SmashKarts() {
       )}
 
       {gameState === "playing" && (
-        <div className="flex flex-col items-center gap-4">
+        <div className="flex flex-col items-center gap-2 w-full h-screen justify-center relative">
           <canvas
             ref={canvasRef}
             width={CANVAS_WIDTH}
             height={CANVAS_HEIGHT}
-            className="border-4 border-border rounded-lg shadow-2xl"
+            className="border-2 sm:border-4 border-border rounded-lg shadow-2xl max-w-full h-auto"
+            style={{
+              maxHeight: isMobile ? '50vh' : '80vh',
+              width: 'auto',
+              height: 'auto',
+            }}
           />
+          
+          {/* Mobile Touch Controls */}
+          {isMobile && (
+            <div className="fixed bottom-0 left-0 right-0 p-4 flex justify-between items-end gap-4 pointer-events-none">
+              {/* Left side - D-pad controls */}
+              <div className="relative w-40 h-40 pointer-events-auto">
+                {/* Up */}
+                <button
+                  onTouchStart={() => touchControlsRef.current.forward = true}
+                  onTouchEnd={() => touchControlsRef.current.forward = false}
+                  onMouseDown={() => touchControlsRef.current.forward = true}
+                  onMouseUp={() => touchControlsRef.current.forward = false}
+                  onMouseLeave={() => touchControlsRef.current.forward = false}
+                  className="absolute top-0 left-1/2 -translate-x-1/2 w-14 h-14 bg-primary/80 hover:bg-primary text-primary-foreground rounded-lg shadow-lg flex items-center justify-center text-2xl font-bold active:scale-95 transition-all"
+                >
+                  ▲
+                </button>
+                {/* Down */}
+                <button
+                  onTouchStart={() => touchControlsRef.current.backward = true}
+                  onTouchEnd={() => touchControlsRef.current.backward = false}
+                  onMouseDown={() => touchControlsRef.current.backward = true}
+                  onMouseUp={() => touchControlsRef.current.backward = false}
+                  onMouseLeave={() => touchControlsRef.current.backward = false}
+                  className="absolute bottom-0 left-1/2 -translate-x-1/2 w-14 h-14 bg-primary/80 hover:bg-primary text-primary-foreground rounded-lg shadow-lg flex items-center justify-center text-2xl font-bold active:scale-95 transition-all"
+                >
+                  ▼
+                </button>
+                {/* Left */}
+                <button
+                  onTouchStart={() => touchControlsRef.current.left = true}
+                  onTouchEnd={() => touchControlsRef.current.left = false}
+                  onMouseDown={() => touchControlsRef.current.left = true}
+                  onMouseUp={() => touchControlsRef.current.left = false}
+                  onMouseLeave={() => touchControlsRef.current.left = false}
+                  className="absolute left-0 top-1/2 -translate-y-1/2 w-14 h-14 bg-primary/80 hover:bg-primary text-primary-foreground rounded-lg shadow-lg flex items-center justify-center text-2xl font-bold active:scale-95 transition-all"
+                >
+                  ◀
+                </button>
+                {/* Right */}
+                <button
+                  onTouchStart={() => touchControlsRef.current.right = true}
+                  onTouchEnd={() => touchControlsRef.current.right = false}
+                  onMouseDown={() => touchControlsRef.current.right = true}
+                  onMouseUp={() => touchControlsRef.current.right = false}
+                  onMouseLeave={() => touchControlsRef.current.right = false}
+                  className="absolute right-0 top-1/2 -translate-y-1/2 w-14 h-14 bg-primary/80 hover:bg-primary text-primary-foreground rounded-lg shadow-lg flex items-center justify-center text-2xl font-bold active:scale-95 transition-all"
+                >
+                  ▶
+                </button>
+              </div>
+              
+              {/* Right side - Shoot button */}
+              <div className="pointer-events-auto">
+                <button
+                  onTouchStart={() => touchControlsRef.current.shoot = true}
+                  onTouchEnd={() => touchControlsRef.current.shoot = false}
+                  onMouseDown={() => touchControlsRef.current.shoot = true}
+                  onMouseUp={() => touchControlsRef.current.shoot = false}
+                  onMouseLeave={() => touchControlsRef.current.shoot = false}
+                  className="w-20 h-20 bg-destructive/80 hover:bg-destructive text-destructive-foreground rounded-full shadow-lg flex items-center justify-center text-3xl font-bold active:scale-95 transition-all"
+                >
+                  🔫
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
       {gameState === "gameover" && (
-        <div className="flex flex-col items-center gap-6 text-center">
-          <h1 className="text-5xl font-bold text-foreground mb-4">
+        <div className="flex flex-col items-center gap-4 sm:gap-6 text-center max-w-lg w-full px-4">
+          <h1 className="text-3xl sm:text-5xl font-bold text-foreground mb-2 sm:mb-4">
             Game Over!
           </h1>
-          <div className="bg-card p-8 rounded-lg border border-border">
-            <h2 className="text-3xl font-semibold mb-4 text-card-foreground">
+          <div className="bg-card p-4 sm:p-8 rounded-lg border border-border w-full">
+            <h2 className="text-2xl sm:text-3xl font-semibold mb-3 sm:mb-4 text-card-foreground">
               🏆 {winner} {winner !== "Draw" && "Wins!"}
             </h2>
             <div className="space-y-2 text-left">
               {carsRef.current.map((car, i) => (
-                <p key={i} className="text-lg" style={{ color: car.color }}>
+                <p key={i} className="text-base sm:text-lg" style={{ color: car.color }}>
                   {car.name}: {car.score} kills
                 </p>
               ))}
@@ -505,22 +611,22 @@ export default function SmashKarts() {
           
           {connectedWallet && (
             <div className="bg-secondary/50 px-4 py-2 rounded-lg">
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs sm:text-sm text-muted-foreground">
                 Connected: {connectedWallet.address.slice(0, 6)}...{connectedWallet.address.slice(-4)}
               </p>
             </div>
           )}
           
-          <div className="flex gap-4">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full sm:w-auto">
             <button
               onClick={startGame}
-              className="px-6 py-3 bg-primary text-primary-foreground rounded-lg text-lg font-semibold hover:opacity-90 transition-opacity"
+              className="w-full sm:w-auto px-6 py-3 bg-primary text-primary-foreground rounded-lg text-base sm:text-lg font-semibold hover:opacity-90 transition-opacity active:scale-95"
             >
               Play Again
             </button>
             <button
               onClick={returnToMenu}
-              className="px-6 py-3 bg-secondary text-secondary-foreground rounded-lg text-lg font-semibold hover:opacity-90 transition-opacity"
+              className="w-full sm:w-auto px-6 py-3 bg-secondary text-secondary-foreground rounded-lg text-base sm:text-lg font-semibold hover:opacity-90 transition-opacity active:scale-95"
             >
               Main Menu
             </button>
