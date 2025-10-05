@@ -45,6 +45,9 @@ export default function SmashKarts() {
   const [gameState, setGameState] = useState<"menu" | "playing" | "gameover">("menu");
   const [winner, setWinner] = useState<string>("");
   const [isMobile, setIsMobile] = useState(false);
+  const [isMinting, setIsMinting] = useState(false);
+  const [mintSuccess, setMintSuccess] = useState(false);
+  const [mintError, setMintError] = useState<string>("");
   
   const carsRef = useRef<Car[]>([]);
   const bulletsRef = useRef<Bullet[]>([]);
@@ -123,6 +126,49 @@ export default function SmashKarts() {
     ];
     bulletsRef.current = [];
     setWinner("");
+    setMintSuccess(false);
+    setMintError("");
+  };
+
+  const handleMintTokens = async () => {
+    if (!connectedWallet?.address) {
+      setMintError("No wallet connected");
+      return;
+    }
+
+    const playerScore = carsRef.current[0].score;
+    // Mint at least 1 token for participation, or the actual score if higher
+    const tokensToMint = playerScore > 0 ? playerScore : 1;
+
+    setIsMinting(true);
+    setMintError("");
+
+    try {
+      const response = await fetch('/api/mint-tokens', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          recipientAddress: connectedWallet.address,
+          amount: tokensToMint,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to mint tokens');
+      }
+
+      setMintSuccess(true);
+      console.log('Mint successful:', data);
+    } catch (error) {
+      console.error('Mint error:', error);
+      setMintError(error instanceof Error ? error.message : 'Failed to mint tokens');
+    } finally {
+      setIsMinting(false);
+    }
   };
 
   const drawCar = (ctx: CanvasRenderingContext2D, car: Car) => {
@@ -608,6 +654,54 @@ export default function SmashKarts() {
               ))}
             </div>
           </div>
+          
+          {/* Token Minting Section */}
+          {connectedWallet && (
+            <div className="bg-accent p-4 sm:p-6 rounded-lg border border-border w-full">
+              <h3 className="text-lg sm:text-xl font-semibold mb-2 text-accent-foreground">
+                🎁 Claim Your Rewards!
+              </h3>
+              <p className="text-sm sm:text-base text-muted-foreground mb-4">
+                {carsRef.current[0].score > 0 ? (
+                  <>
+                    You earned <strong className="text-primary">{carsRef.current[0].score} SUR tokens</strong> for your {carsRef.current[0].score} {carsRef.current[0].score === 1 ? 'kill' : 'kills'}!
+                  </>
+                ) : (
+                  <>
+                    You earned <strong className="text-primary">1 SUR token</strong> for participating! 🎮
+                  </>
+                )}
+              </p>
+              
+              {!mintSuccess ? (
+                <button
+                  onClick={handleMintTokens}
+                  disabled={isMinting}
+                  className="w-full px-6 py-3 bg-primary text-primary-foreground rounded-lg text-base sm:text-lg font-semibold hover:opacity-90 transition-opacity active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isMinting ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <span className="animate-spin">⏳</span> Minting...
+                    </span>
+                  ) : (
+                    '🪙 Mint Tokens to Wallet'
+                  )}
+                </button>
+              ) : (
+                <div className="bg-primary/10 border border-primary rounded-lg p-3">
+                  <p className="text-primary font-semibold flex items-center justify-center gap-2">
+                    ✅ Tokens minted successfully!
+                  </p>
+                </div>
+              )}
+              
+              {mintError && (
+                <div className="mt-3 bg-destructive/10 border border-destructive rounded-lg p-3">
+                  <p className="text-destructive text-sm">{mintError}</p>
+                </div>
+              )}
+            </div>
+          )}
           
           {connectedWallet && (
             <div className="bg-secondary/50 px-4 py-2 rounded-lg">

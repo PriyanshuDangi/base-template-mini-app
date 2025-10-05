@@ -4,6 +4,14 @@
 
 A template for building Farcaster mini apps with Next.js, QuickAuth, and Ethereum integration.
 
+## Features
+
+🏎️ **SmashKarts Game** - Real-time browser-based combat racing game  
+📱 **Mobile Responsive** - Touch controls and adaptive UI for mobile devices  
+🪙 **Token Rewards** - Mint SUR tokens based on game performance  
+🔐 **Wallet Integration** - Privy authentication with Web3 support  
+⚡ **Base Sepolia** - Built on Base testnet for fast, cheap transactions  
+
 ## Getting Started
 
 1. Use this template to create a new repository
@@ -25,6 +33,12 @@ cd <your-repo-name>
      - Get your API Key from [Neynar Developer Portal](https://dev.neynar.com/app)
      - Used for fetching Farcaster data
      - Can be used for notifications if you don't want to use Redis
+
+   - **Token Minting** (Pre-configured for game rewards):
+     - Minter wallet: `0x117A3E11a93B2C88713bd35bE47FaFb81E4461C5`
+     - Ensure minter has MINTER_ROLE on the token contract
+     - Ensure minter has ETH for gas on Base Sepolia
+     - See [MINTING_SETUP.md](./MINTING_SETUP.md) for detailed setup instructions
 
 4. Install dependencies:
 
@@ -96,10 +110,32 @@ export async function GET(request: Request) {
 }
 ```
 
+## Token Minting
+
+The game includes a token reward system where players can mint SUR tokens based on their performance:
+
+- **1 Kill = 1 SUR Token**
+- **Participation Reward**: Minimum 1 token even with 0 kills! 🎮
+- Tokens are minted to the player's connected wallet
+- Minter credentials are pre-configured (no environment variables needed)
+- See [MINTING_SETUP.md](./MINTING_SETUP.md) for complete setup guide
+
+**Contract Details:**
+- Address: `0x839386A0Be9136Ce7d3b07Ba154153F0F65805e5`
+- Network: Base Sepolia
+- Token: Surr (SUR)
+
+**Minter Wallet:**
+- Address: `0x117A3E11a93B2C88713bd35bE47FaFb81E4461C5`
+- Must have MINTER_ROLE on the token contract
+- Must have ETH for gas fees
+
 ## Learn More
 
 - [MiniApps Documentation](https://miniapps.farcaster.xyz/)
 - [Next.js Documentation](https://nextjs.org/docs)
+- [Token Minting Setup](./MINTING_SETUP.md)
+- [Game Architecture](./docs/architecture.md)
 
 ## Guide
 
