@@ -37,7 +37,7 @@ const SHOOT_COOLDOWN = 300;
 
 export default function SmashKarts() {
   const [mounted, setMounted] = useState(false);
-  const { ready, authenticated, login, logout, user } = usePrivy();
+  const { ready, authenticated, login, logout } = usePrivy();
   const { wallets } = useWallets();
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
