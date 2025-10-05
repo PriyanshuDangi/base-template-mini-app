@@ -35,6 +35,7 @@ const TURN_SPEED = 0.08;
 const SHOOT_COOLDOWN = 300;
 
 export default function SmashKarts() {
+  const [mounted, setMounted] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [gameState, setGameState] = useState<"menu" | "playing" | "gameover">("menu");
   const [winner, setWinner] = useState<string>("");
@@ -43,7 +44,11 @@ export default function SmashKarts() {
   const bulletsRef = useRef<Bullet[]>([]);
   const keysRef = useRef<{ [key: string]: boolean }>({});
   const lastShotRef = useRef<number>(0);
-  const animationIdRef = useRef<number>();
+  const animationIdRef = useRef<number | undefined>(undefined);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const initGame = () => {
     carsRef.current = [
@@ -391,6 +396,14 @@ export default function SmashKarts() {
   const returnToMenu = () => {
     setGameState("menu");
   };
+
+  if (!mounted) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-background">
+        <div className="text-xl text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4">

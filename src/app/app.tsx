@@ -8,9 +8,7 @@ const SmashKarts = dynamic(() => import("~/components/SmashKarts"), {
   ssr: false,
 });
 
-export default function App(
-  { title }: { title?: string } = { title: APP_NAME }
-) {
+export default function App() {
   return <SmashKarts />;
 }
 
