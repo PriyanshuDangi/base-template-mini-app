@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { usePrivy, useWallets } from "@privy-io/react-auth";
 
 interface Car {
   x: number;
@@ -36,6 +37,9 @@ const SHOOT_COOLDOWN = 300;
 
 export default function SmashKarts() {
   const [mounted, setMounted] = useState(false);
+  const { ready, authenticated, login, logout, user } = usePrivy();
+  const { wallets } = useWallets();
+  
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [gameState, setGameState] = useState<"menu" | "playing" | "gameover">("menu");
   const [winner, setWinner] = useState<string>("");
@@ -49,6 +53,8 @@ export default function SmashKarts() {
   useEffect(() => {
     setMounted(true);
   }, []);
+  
+  const connectedWallet = wallets[0];
 
   const initGame = () => {
     carsRef.current = [
@@ -386,6 +392,7 @@ export default function SmashKarts() {
         cancelAnimationFrame(animationIdRef.current);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameState]);
 
   const startGame = () => {
@@ -422,12 +429,48 @@ export default function SmashKarts() {
               <p>🔫 <strong>Space</strong> - Shoot</p>
             </div>
           </div>
-          <button
-            onClick={startGame}
-            className="px-8 py-4 bg-primary text-primary-foreground rounded-lg text-xl font-semibold hover:opacity-90 transition-opacity"
-          >
-            Start Game
-          </button>
+          
+          {!ready && (
+            <div className="px-8 py-4 bg-secondary text-secondary-foreground rounded-lg text-xl font-semibold">
+              Loading...
+            </div>
+          )}
+          
+          {ready && !authenticated && (
+            <div className="flex flex-col gap-4 items-center">
+              <p className="text-muted-foreground">Connect your wallet to play</p>
+              <button
+                onClick={login}
+                className="px-8 py-4 bg-primary text-primary-foreground rounded-lg text-xl font-semibold hover:opacity-90 transition-opacity"
+              >
+                Connect Wallet
+              </button>
+            </div>
+          )}
+          
+          {ready && authenticated && (
+            <div className="flex flex-col gap-4 items-center">
+              {connectedWallet && (
+                <div className="bg-secondary/50 px-4 py-2 rounded-lg">
+                  <p className="text-sm text-muted-foreground">
+                    Connected: {connectedWallet.address.slice(0, 6)}...{connectedWallet.address.slice(-4)}
+                  </p>
+                </div>
+              )}
+              <button
+                onClick={startGame}
+                className="px-8 py-4 bg-primary text-primary-foreground rounded-lg text-xl font-semibold hover:opacity-90 transition-opacity"
+              >
+                Start Game
+              </button>
+              <button
+                onClick={logout}
+                className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Disconnect Wallet
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -459,6 +502,15 @@ export default function SmashKarts() {
               ))}
             </div>
           </div>
+          
+          {connectedWallet && (
+            <div className="bg-secondary/50 px-4 py-2 rounded-lg">
+              <p className="text-sm text-muted-foreground">
+                Connected: {connectedWallet.address.slice(0, 6)}...{connectedWallet.address.slice(-4)}
+              </p>
+            </div>
+          )}
+          
           <div className="flex gap-4">
             <button
               onClick={startGame}
